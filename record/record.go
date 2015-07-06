@@ -1,6 +1,8 @@
-package records
+package record
 
 import (
+	"sync"
+
 	dag "github.com/ipfs/go-ipfs/merkledag"
 )
 
@@ -121,4 +123,47 @@ func Marshal(r Record) ([]byte, error) {
 // Unmarshal returns a Record instance from its byte representation.
 func Unmarshal([]byte) (Record, error) {
 	panic("not yet implemented")
+}
+
+// UnmarshalType returns a Record instance from its byte representation,
+// acord to given type.
+func UnmarshalType(t Type, buf []byte) (Record, error) {
+
+}
+
+// UnmarshalTypeSet returns a Record instance from its byte representation,
+// acord to type chosen from given typeset.
+func UnmarshalTypeSet(ts *TypeSet, buf []byte) (Record, error) {
+	m, err := Unmarshal(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	t, err := m.Type()
+}
+
+// TypeSet is a collection of Types,
+// used to track types registered in the record system.
+type TypeSet struct {
+	sync.RWMutex
+	types map[string]Type
+}
+
+// Type returns the type registered at given key
+func (ts *TypeSet) Type(s string) Type {
+	ts.RLock()
+	defer ts.RUnlock()
+	return ts[s]
+}
+
+// Types returns the types registered (allowed)
+func (ts *TypeSet) Types() map[string]Type {
+	ts.RLock()
+	defer ts.RUnlock()
+
+	out := map[string]Type{}
+	for k, v := range s.types {
+		out[k] = v
+	}
+	return out
 }
