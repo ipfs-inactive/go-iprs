@@ -1,0 +1,8 @@
+package ipfs.iprs;
+
+message Record {
+	optional bytes Type = 1;     // link to the record type object
+	optional uint64 Version = 2; // monotonically increasing version number
+  optional bytes Validity = 3; // data (or link) needed for validity
+	optional bytes Value = 4;    // data (or link) of record's value
+}
