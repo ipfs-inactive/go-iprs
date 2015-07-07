@@ -3,7 +3,6 @@ package recordstore
 import (
 	"errors"
 
-	dag "github.com/ipfs/go-ipfs/merkledag"
 	cxt "golang.org/x/net/context"
 
 	record "github.com/ipfs/go-iprs/record"

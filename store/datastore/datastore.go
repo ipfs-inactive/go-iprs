@@ -1,9 +1,8 @@
 package recordstore_datastore
 
 import (
-	"errors"
+	"fmt"
 
-	dag "github.com/ipfs/go-ipfs/merkledag"
 	ds "github.com/jbenet/go-datastore"
 	cxt "golang.org/x/net/context"
 
@@ -27,7 +26,7 @@ func New(ts *record.TypeSet, ds ds.Datastore) *Store {
 // In networked Stores, this may be a blocking operation.
 // Some Stores may enforce strict consistency, others may be
 // eventually consistent, and some might simply be best effort.
-func (s *Store) Put(ctx cxt.Context, p Path, r record.Record) error {
+func (s *Store) Put(ctx cxt.Context, p store.Path, r record.Record) error {
 	k := ds.NewKey(string(p))
 	m, err := record.Marshal(r)
 	if err != nil {
@@ -43,14 +42,18 @@ func (s *Store) Put(ctx cxt.Context, p Path, r record.Record) error {
 // In networked Stores, this may be a blocking operation.
 // Some Stores may enforce strict consistency, others may be
 // eventually consistent, and some might simply be best effort.
-func (s *Store) Get(ctx cxt.Context, p Path) (record.Record, error) {
+func (s *Store) Get(ctx cxt.Context, p store.Path) (record.Record, error) {
 	k := ds.NewKey(string(p))
 	m, err := s.ds.Get(k)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.ts.Unmarshal(m)
+	d, ok := m.([]byte)
+	if !ok {
+		return nil, fmt.Errorf("invalid datastore data (not a buffer)")
+	}
+	return record.UnmarshalFromSet(s.ts, d)
 }
 
 // GetChan return a channe of records for a given path from the
@@ -59,7 +62,7 @@ func (s *Store) Get(ctx cxt.Context, p Path) (record.Record, error) {
 // In networked Stores, this may be a blocking operation.
 // Some Stores may enforce strict consistency, others may be
 // eventually consistent, and some might simply be best effort.
-func (s *Store) GetChan(ctx cxt.Context, p Path) (<-chan record.Record, error) {
+func (s *Store) GetChan(ctx cxt.Context, p store.Path) (<-chan record.Record, error) {
 	r, err := s.Get(ctx, p)
 	if err != nil {
 		return nil, err
