@@ -1,19 +1,54 @@
 package record
 
 import (
-	"sync"
+	"bytes"
+	"fmt"
 
 	dag "github.com/ipfs/go-ipfs/merkledag"
 )
 
 type Type interface {
 	// Node returns a DAG.Node representing the record.Type.
-	Node() dag.Node
+	Node() *dag.Node
 
 	// Validator returns an object that can determine the validity
 	// of a Record, and that can order records deterministically.
 	// The Validator is specific to this Type.
 	Validator() Validator
+
+	// Unmarshal loads a record from given buffer
+	Unmarshal(buf []byte) (Record, error)
+
+	// New constructs a new record from given node.
+	New(nd *dag.Node) (Record, error)
+}
+
+// NodeHasType returns whether a dag.Node nd is of Type t.
+func NodeHasType(nd *dag.Node, t Type) (bool, error) {
+	if nd == nil || t == nil {
+		return false, fmt.Errorf("nil argument")
+	}
+
+	nt, err := nodeType(nd)
+	if err != nil {
+		return false, err
+	}
+
+	th, err := t.Node().Multihash()
+	if err != nil {
+		return false, fmt.Errorf("invalid type. failed to get multihash (%s)", err)
+	}
+
+	return bytes.Equal(nt, th), nil
+}
+
+// HasType returns whether a Record r is of Type t.
+func HasType(r Record, t Type) bool {
+	if r == nil || t == nil {
+		return false
+	}
+
+	return r.Type() == t
 }
 
 // Record is an object that stores some data relevant to a distributed
@@ -21,7 +56,7 @@ type Type interface {
 // "glue" that improves how they operate.
 type Record interface {
 	// Node returns a DAG.Node representing the Record.
-	Node() dag.Node
+	Node() *dag.Node
 
 	// Type returns the type of the record.
 	Type() Type
@@ -29,10 +64,10 @@ type Record interface {
 	// Version returns the version number of a record.
 	Version() int
 
-	// Data returns data carried by the record used in determining validity
+	// Data returns data carried (or linked) by the record used in determining validity
 	Validity() []byte
 
-	// Value returns data carried by the record to be used
+	// Value returns data carried (or linked) by the record to be used
 	Value() []byte
 }
 
@@ -104,66 +139,4 @@ func Order(validator Validator, a, b Record) int {
 	am := mustMarshal(a)
 	bm := mustMarshal(b)
 	return bytes.Compare(am, bm)
-}
-
-// mustMarshal returns a byte representation of a record.
-func mustMarshal(Record) []byte {
-	buf, err := Marshal()
-	if err != nil {
-		panic("marshal failed. record should never be invalid")
-	}
-	return buf
-}
-
-// Marshal returns a byte representation of a record.
-func Marshal(r Record) ([]byte, error) {
-	return r.Node().Marshal()
-}
-
-// Unmarshal returns a Record instance from its byte representation.
-func Unmarshal([]byte) (Record, error) {
-	panic("not yet implemented")
-}
-
-// UnmarshalType returns a Record instance from its byte representation,
-// acord to given type.
-func UnmarshalType(t Type, buf []byte) (Record, error) {
-
-}
-
-// UnmarshalTypeSet returns a Record instance from its byte representation,
-// acord to type chosen from given typeset.
-func UnmarshalTypeSet(ts *TypeSet, buf []byte) (Record, error) {
-	m, err := Unmarshal(buf)
-	if err != nil {
-		return nil, err
-	}
-
-	t, err := m.Type()
-}
-
-// TypeSet is a collection of Types,
-// used to track types registered in the record system.
-type TypeSet struct {
-	sync.RWMutex
-	types map[string]Type
-}
-
-// Type returns the type registered at given key
-func (ts *TypeSet) Type(s string) Type {
-	ts.RLock()
-	defer ts.RUnlock()
-	return ts[s]
-}
-
-// Types returns the types registered (allowed)
-func (ts *TypeSet) Types() map[string]Type {
-	ts.RLock()
-	defer ts.RUnlock()
-
-	out := map[string]Type{}
-	for k, v := range s.types {
-		out[k] = v
-	}
-	return out
 }
