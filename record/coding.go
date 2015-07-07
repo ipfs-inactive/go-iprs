@@ -33,15 +33,9 @@ var requiredLinks = []string{
 	linkValue,
 }
 
-// unmarshalNode returns a Record instance from its byte representation.
-func unmarshalNode(buf []byte) (*dag.Node, error) {
-	nd, err := dag.Decoded(buf)
-	if err != nil {
-		return nil, err
-	}
-
-	// ensure node has required links
-	for _, n := range requiredLinks {
+// NodeHasRequiredLinks ensures a node has required links
+func NodeHasRequiredLinks(nd *dag.Node, links []string) error {
+	for _, n := range links {
 		found := false
 		for _, link := range nd.Links {
 			if link.Name == n {
@@ -50,18 +44,26 @@ func unmarshalNode(buf []byte) (*dag.Node, error) {
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("invalid record. missing link: %s", n)
+			return fmt.Errorf("invalid record. missing link: %s", n)
 		}
+	}
+
+	return nil
+}
+
+// unmarshalNode returns a Record instance from its byte representation.
+func unmarshalNode(buf []byte) (*dag.Node, error) {
+	nd, err := dag.Decoded(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := NodeHasRequiredLinks(nd, requiredLinks); err != nil {
+		return nil, err
 	}
 
 	// ok looks good.
 	return nd, nil
-}
-
-// UnmarshalType returns a Record instance from its byte representation,
-// acord to given type.
-func UnmarshalType(t Type, buf []byte) (Record, error) {
-	return t.Unmarshal(buf)
 }
 
 func unmarshalTypeNode(t Type, buf []byte) (*dag.Node, error) {
@@ -77,6 +79,17 @@ func unmarshalTypeNode(t Type, buf []byte) (*dag.Node, error) {
 	}
 
 	return nd, nil
+}
+
+// UnmarshalType returns a Record instance from its byte representation,
+// acord to given type.
+func UnmarshalType(t Type, buf []byte) (Record, error) {
+	nd, err := unmarshalTypeNode(t, buf)
+	if err != nil {
+		return nil, err
+	}
+
+	return t.New(nd)
 }
 
 // UnmarshalTypeSet returns a Record instance from its byte representation,

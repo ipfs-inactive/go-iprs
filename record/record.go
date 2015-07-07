@@ -16,9 +16,6 @@ type Type interface {
 	// The Validator is specific to this Type.
 	Validator() Validator
 
-	// Unmarshal loads a record from given buffer
-	Unmarshal(buf []byte) (Record, error)
-
 	// New constructs a new record from given node.
 	New(nd *dag.Node) (Record, error)
 }
